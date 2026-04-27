@@ -26,4 +26,4 @@ def convert_currency():
         "converted_amount": data.get("result")
     })
 
-#
+# 
