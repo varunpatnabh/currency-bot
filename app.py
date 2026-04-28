@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify
 import requests
+import os
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Currency Converter Bot is running 🚀"
+    return "App is running 🚀", 200
 
 @app.route("/convert", methods=["GET"])
 def convert_currency():
@@ -25,9 +26,7 @@ def convert_currency():
         "amount": amount,
         "converted_amount": data.get("result")
     })
-import os
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
-# 
