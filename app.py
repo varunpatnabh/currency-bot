@@ -11,10 +11,10 @@ app = Flask(__name__)
 # =========================
 # 🔐 BOT AUTH (HARDCODED FOR NOW)
 # =========================
-APP_ID = "b32f363d-cd10-473c-8728-4674e58399d8"
+APP_ID = "aa38dc3f-5be9-4cfa-897e-dbe2830d5709"
 
 # 👇 PASTE YOUR SECRET VALUE HERE (NOT SECRET ID)
-APP_PASSWORD = "LFg8Q~6ovLcy6WhkaenLEZ-1O4uHBdgvs1-n.cwY"
+APP_PASSWORD = "F-h8Q~3DBoFZc7NMD2VDRnAOUxuZayPOvrD9QcnY"
 
 settings = BotFrameworkAdapterSettings(APP_ID, APP_PASSWORD)
 adapter = BotFrameworkAdapter(settings)
