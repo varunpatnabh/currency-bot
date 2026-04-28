@@ -1,97 +1,60 @@
-from flask import Flask, request, jsonify
-import requests
+from flask import Flask, request, Response
+import asyncio
+
+from botbuilder.core import BotFrameworkAdapter, BotFrameworkAdapterSettings, TurnContext
+from botbuilder.schema import Activity
+
 import os
 
 app = Flask(__name__)
 
-# -------------------------
-# Health check
-# -------------------------
-@app.route("/")
-def home():
-    return "App is running 🚀", 200
+# 🔐 Azure Bot credentials (auto picked from env)
+APP_ID = os.environ.get("MicrosoftAppId", "")
+APP_PASSWORD = os.environ.get("MicrosoftAppPassword", "")
+
+settings = BotFrameworkAdapterSettings(APP_ID, APP_PASSWORD)
+adapter = BotFrameworkAdapter(settings)
 
 
 # -------------------------
-# REST API
+# BOT LOGIC
 # -------------------------
-@app.route("/convert", methods=["GET"])
-def convert_currency():
-    from_currency = request.args.get("from")
-    to_currency = request.args.get("to")
-    amount = request.args.get("amount")
+async def on_message_activity(turn_context: TurnContext):
+    user_text = turn_context.activity.text
 
-    if not from_currency or not to_currency or not amount:
-        return jsonify({"error": "Missing parameters"}), 400
+    reply = f"You said: {user_text}"
 
-    url = f"https://open.er-api.com/v6/latest/{from_currency}"
-    data = requests.get(url).json()
-
-    if data.get("result") != "success":
-        return jsonify({"error": "API failed"}), 500
-
-    rate = data["rates"].get(to_currency)
-
-    if not rate:
-        return jsonify({"error": "Invalid currency"}), 400
-
-    converted = float(amount) * rate
-
-    return jsonify({
-        "from": from_currency,
-        "to": to_currency,
-        "amount": amount,
-        "converted_amount": round(converted, 2)
-    })
+    await turn_context.send_activity(reply)
 
 
 # -------------------------
-# TEAMS BOT ENDPOINT (SAFE)
+# MAIN ENDPOINT
 # -------------------------
 @app.route("/api/messages", methods=["POST"])
 def messages():
-    try:
-        data = request.get_json(force=True)
-        user_text = data.get("text", "").lower()
+    body = request.json
+    activity = Activity().deserialize(body)
+    auth_header = request.headers.get("Authorization", "")
 
-        reply_text = "Try: convert 10 USD to INR"
+    async def call_bot_logic(turn_context):
+        await on_message_activity(turn_context)
 
-        if "convert" in user_text:
-            parts = user_text.split()
+    task = adapter.process_activity(activity, auth_header, call_bot_logic)
+    asyncio.run(task)
 
-            amount = float(parts[1])
-            from_currency = parts[2].upper()
-            to_currency = parts[4].upper()
-
-            url = f"https://open.er-api.com/v6/latest/{from_currency}"
-            api_data = requests.get(url).json()
-
-            if api_data.get("result") == "success":
-                rate = api_data["rates"].get(to_currency)
-
-                if rate:
-                    converted = round(amount * rate, 2)
-                    reply_text = f"{amount} {from_currency} = {converted} {to_currency}"
-                else:
-                    reply_text = "Invalid currency"
-            else:
-                reply_text = "Currency API failed"
-
-        return jsonify({
-            "type": "message",
-            "text": reply_text
-        })
-
-    except Exception as e:
-        return jsonify({
-            "type": "message",
-            "text": "Error processing request"
-        })
+    return Response(status=201)
 
 
 # -------------------------
-# RUN APP
+# HEALTH CHECK
+# -------------------------
+@app.route("/")
+def home():
+    return "Bot is running 🚀"
+
+
+# -------------------------
+# RUN
 # -------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=8000)
